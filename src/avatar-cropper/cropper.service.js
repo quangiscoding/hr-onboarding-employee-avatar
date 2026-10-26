@@ -21,7 +21,8 @@ class AvatarCropperService {
    * Trích xuất thông tin nhân sự và dữ liệu ảnh từ dòng đang chọn
    */
   static getSelectedRowContext() {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
     const activeRange = sheet.getActiveRange();
 
     if (!activeRange) {

@@ -2,311 +2,674 @@
 <html>
   <head>
     <base target="_top" />
-    <!-- Cropper.js CDN -->
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"
-    />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
     <style>
       * {
         box-sizing: border-box;
       }
       body {
-        font-family:
-          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: "Google Sans", Roboto, Arial, sans-serif;
         font-size: 13px;
-        padding: 12px;
+        color: #202124;
         margin: 0;
+        padding: 8px 10px;
+        max-width: 100%;
         background-color: #ffffff;
+        user-select: none;
       }
-      .card {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        padding: 10px;
+      h2 {
+        font-size: 15px;
+        margin: 0 0 4px;
+        color: #202124;
+      }
+      .subtitle {
+        color: #5f6368;
+        font-size: 11.5px;
         margin-bottom: 12px;
       }
-      .card-title {
-        font-weight: bold;
-        margin-bottom: 4px;
-        color: #212529;
+      .section-title {
+        font-weight: 600;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: #5f6368;
+        margin: 10px 0 6px;
       }
-      .img-container {
+      .card {
+        background: #fff;
+        border: 1px solid #e8eaed;
+        border-radius: 6px;
+        padding: 8px 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      /* KHUNG CANVAS XEM TRƯỚC (CHUẨN WELCOME ONBOARD) */
+      .canvas-container {
         width: 100%;
-        height: 260px;
-        background-color: #f1f3f5;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        text-align: center;
+        background: #f8f9fa;
+        border: 1px dashed #dadce0;
+        border-radius: 6px;
+        padding: 6px;
+        cursor: grab;
       }
-      img#imagePreview {
-        max-width: 100%;
-        max-height: 100%;
+      .canvas-container:active {
+        cursor: grabbing;
+      }
+      canvas {
+        width: 100%;
+        height: auto;
+        border-radius: 4px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
         display: block;
       }
-      .btn-group {
+
+      /* BỘ ĐIỀU CHỈNH THANH TRƯỢT */
+      .control-row {
         display: flex;
+        align-items: center;
         gap: 6px;
-        margin-top: 10px;
+        margin-bottom: 6px;
+        font-size: 11.5px;
+        color: #555;
       }
-      button {
+      .control-row label {
+        width: 80px;
+      }
+      .control-row input[type="range"] {
         flex: 1;
-        padding: 8px 12px;
-        border: none;
-        border-radius: 4px;
-        font-weight: bold;
         cursor: pointer;
-        transition: background 0.15s ease-in-out;
       }
-      .btn-primary {
-        background: #0d6efd;
+      .control-row span {
+        width: 45px;
+        font-weight: bold;
+        text-align: right;
+        font-size: 11px;
+      }
+
+      /* NÚT THAO TÁC */
+      .btn {
+        width: 100%;
+        padding: 9px 12px;
+        border: none;
+        border-radius: 6px;
+        background: #ef403e;
         color: #fff;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        margin-top: 8px;
       }
-      .btn-primary:hover:not(:disabled) {
-        background: #0b5ed7;
+      .btn:hover:not(:disabled) {
+        background: #d93836;
       }
       .btn-secondary {
-        background: #6c757d;
-        color: #fff;
+        width: 100%;
+        margin-top: 6px;
+        padding: 7px 12px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        background: #fff;
+        color: #1a73e8;
+        font-weight: 500;
+        cursor: pointer;
+        font-size: 11.5px;
       }
       .btn-secondary:hover:not(:disabled) {
-        background: #5c636a;
+        background: #f8f9fa;
       }
-      .btn-load {
-        background: #198754;
-        color: #fff;
+      .btn-download {
         width: 100%;
-        margin-bottom: 10px;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 6px;
+        background: #1e8e3e;
+        color: #fff;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        margin-top: 6px;
       }
-      .btn-load:hover:not(:disabled) {
-        background: #157347;
+      .btn-download:hover:not(:disabled) {
+        background: #137333;
       }
       button:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
+        background: #bdc1c6 !important;
+        border-color: #bdc1c6 !important;
+        color: #fff !important;
+        cursor: not-allowed !important;
       }
-      .status-msg {
+
+      /* STATUS BOX */
+      .status {
+        display: none;
         margin-top: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
         font-size: 12px;
-        font-weight: 500;
-        line-height: 1.4;
         word-break: break-word;
       }
-      .status-error {
-        color: #dc3545;
+      .status.error {
+        display: block;
+        background: #fce8e6;
+        color: #b3261e;
       }
-      .status-success {
-        color: #198754;
+      .status.success {
+        display: block;
+        background: #e6f4ea;
+        color: #137333;
       }
-      .status-info {
-        color: #0d6efd;
+      .status.info {
+        display: block;
+        background: #e8f0fe;
+        color: #1a73e8;
+      }
+
+      .spinner {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      input[type="file"] {
+        display: none;
+      }
+      ::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+      }
+      html,
+      body {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
       }
     </style>
   </head>
   <body>
-    <button class="btn-load" id="btnLoad" onclick="loadSelectedRow()">
-      📥 Tải ảnh từ dòng đang chọn
+    <h2>Avatar Tools 1:1 ✂️</h2>
+    <div class="subtitle">
+      Căn chỉnh & chuẩn hóa ảnh đại diện nhân sự vuông 1:1
+    </div>
+
+    <!-- NÚT TẢI DÒNG TRÊN SHEET -->
+    <button
+      class="btn-secondary"
+      id="load-btn"
+      style="
+        border-color: #1a73e8;
+        font-weight: 600;
+        margin-top: 0;
+        margin-bottom: 8px;
+      "
+      onclick="loadSelectedRow()"
+    >
+      📥 Đọc ảnh từ dòng đang chọn
     </button>
 
-    <div class="card" id="infoCard" style="display: none">
-      <div class="card-title" id="candidateName">Nhân sự: -</div>
-      <div style="color: #6c757d; font-size: 12px" id="candidateEmail">
-        Email: -
+    <!-- CÔNG CỤ TẠO & CĂN CHỈNH ẢNH (CANVAS 1000x1000) -->
+    <div class="card">
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="cropCanvas" width="1000" height="1000"></canvas>
       </div>
-    </div>
 
-    <div class="img-container">
-      <img
-        id="imagePreview"
-        src=""
-        alt="Vui lòng chọn dòng hoặc tải ảnh"
-        style="display: none"
-      />
-      <span id="placeholderText" style="color: #adb5bd"
-        >Chưa có ảnh hiển thị</span
-      >
-    </div>
+      <!-- UPLOAD ẢNH TỪ MÁY KHI CẦN -->
+      <div style="margin-top: 8px">
+        <button
+          class="btn-secondary"
+          onclick="document.getElementById('avatar-input').click()"
+        >
+          📷 Upload Ảnh khác từ máy tính
+        </button>
+        <input
+          type="file"
+          id="avatar-input"
+          accept="image/*"
+          onchange="handleAvatarUpload(this)"
+        />
+      </div>
 
-    <div class="btn-group">
-      <button
-        class="btn-secondary"
-        id="btnRotLeft"
-        onclick="rotateImage(-90)"
-        disabled
-      >
-        ↺ Xoay trái
+      <!-- THANH TRƯỢT BỘ ĐIỀU CHỈNH (CHUẨN WELCOME ONBOARD) -->
+      <div style="margin-top: 10px">
+        <div class="control-row">
+          <label>Zoom:</label>
+          <input
+            type="range"
+            id="zoomScale"
+            min="0.4"
+            max="2.5"
+            step="0.05"
+            value="1.0"
+            oninput="renderCanvas()"
+            disabled
+          />
+          <span id="zoomVal">1.00x</span>
+        </div>
+        <div class="control-row">
+          <label>Trái / Phải:</label>
+          <input
+            type="range"
+            id="offsetX"
+            min="-400"
+            max="400"
+            step="2"
+            value="0"
+            oninput="renderCanvas()"
+            disabled
+          />
+          <span id="xVal">0px</span>
+        </div>
+        <div class="control-row">
+          <label>Lên / Xuống:</label>
+          <input
+            type="range"
+            id="offsetY"
+            min="-400"
+            max="400"
+            step="2"
+            value="0"
+            oninput="renderCanvas()"
+            disabled
+          />
+          <span id="yVal">0px</span>
+        </div>
+      </div>
+
+      <!-- XOAY ẢNH 90 ĐỘ -->
+      <div style="display: flex; gap: 6px; margin-top: 6px">
+        <button
+          class="btn-secondary"
+          id="btnRotLeft"
+          style="margin-top: 0"
+          onclick="rotateImage(-90)"
+          disabled
+        >
+          ↺ Xoay trái
+        </button>
+        <button
+          class="btn-secondary"
+          id="btnRotRight"
+          style="margin-top: 0"
+          onclick="rotateImage(90)"
+          disabled
+        >
+          ↻ Xoay phải
+        </button>
+      </div>
+
+      <!-- NÚT LƯU LÊN DRIVE VÀ TẢI VỀ MÁY -->
+      <button id="save-btn" class="btn" onclick="handleSaveToDrive()" disabled>
+        💾 Lưu Avatar 1:1 lên Drive & Cập nhật Sheet
       </button>
       <button
-        class="btn-secondary"
-        id="btnRotRight"
-        onclick="rotateImage(90)"
+        id="download-btn"
+        class="btn-download"
+        onclick="downloadImage()"
         disabled
       >
-        ↻ Xoay phải
+        ⬇️ Tải ảnh về máy (.JPG)
       </button>
     </div>
 
-    <div class="btn-group">
-      <button
-        class="btn-primary"
-        id="btnSave"
-        onclick="saveCroppedAvatar()"
-        disabled
-      >
-        💾 Lưu Avatar 1:1
-      </button>
-    </div>
-
-    <div id="statusArea" class="status-msg"></div>
+    <div id="status" class="status"></div>
 
     <script>
-      let cropper = null;
       let currentRowContext = null;
+      let avatarImg = new Image();
+      let avatarLoaded = false;
 
-      function setStatus(msg, type = "info") {
-        const area = document.getElementById("statusArea");
-        area.className =
-          "status-msg " +
-          (type === "error"
-            ? "status-error"
-            : type === "success"
-              ? "status-success"
-              : "status-info");
-        area.innerText = msg;
+      const canvas = document.getElementById("cropCanvas");
+      const ctx = canvas.getContext("2d");
+      const container = document.getElementById("canvasContainer");
+
+      // Cấu hình khung vuông 1:1 chiếm TRỌN TOÀN BỘ Canvas (1000x1000)
+      const CROP_BOX = {
+        size: 1000,
+        x: 0,
+        y: 0,
+      };
+
+      let state = {
+        rotation: 0,
+        isDragging: false,
+        startX: 0,
+        startY: 0,
+      };
+
+      function showStatus(type, message) {
+        const el = document.getElementById("status");
+        el.className = "status " + type;
+        el.innerHTML = message;
       }
 
-      // 1. Đọc thông tin dòng đang chọn từ Google Sheets
+      function clearStatus() {
+        const el = document.getElementById("status");
+        el.className = "status";
+        el.innerHTML = "";
+      }
+
+      // 1. Đọc dữ liệu dòng từ Sheet UC06
       function loadSelectedRow() {
-        setStatus("⏳ Đang tải dữ liệu dòng đang chọn...", "info");
-        document.getElementById("btnLoad").disabled = true;
+        const btn = document.getElementById("load-btn");
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner"></span>Đang đọc dòng trên Sheet...';
+        clearStatus();
 
         google.script.run
-          .withSuccessHandler((context) => {
-            document.getElementById("btnLoad").disabled = false;
-            onRowContextLoaded(context);
+          .withSuccessHandler(function (res) {
+            btn.disabled = false;
+            btn.innerHTML = "📥 Đọc ảnh từ dòng đang chọn";
+
+            if (!res) {
+              showStatus("error", "❌ Không nhận được dữ liệu từ Sheet.");
+              return;
+            }
+
+            currentRowContext = res;
+
+            if (res.errorMsg || !res.originalImageBase64) {
+              showStatus(
+                "error",
+                "⚠️ " +
+                  (res.errorMsg ||
+                    "Không tìm thấy link ảnh trên Google Drive!"),
+              );
+              return;
+            }
+
+            loadAvatarImage(res.originalImageBase64);
+            showStatus(
+              "success",
+              `✅ Đã đọc ảnh của: <b>${res.fullName || "Dòng #" + res.rowIndex}</b>. Căn chỉnh vị trí rồi bấm Lưu.`,
+            );
           })
-          .withFailureHandler((err) => {
-            document.getElementById("btnLoad").disabled = false;
-            console.error("Apps Script Error:", err);
-            setStatus("❌ Lỗi: " + (err.message || err), "error");
+          .withFailureHandler(function (err) {
+            btn.disabled = false;
+            btn.innerHTML = "📥 Đọc ảnh từ dòng đang chọn";
+            showStatus("error", "❌ Lỗi: " + (err.message || err));
           })
-          .cropperApi_getSelectedRowContext(); // ✅ Gọi hàm bridge tại Global Scope
+          .cropperApi_getSelectedRowContext();
       }
 
-      function onRowContextLoaded(context) {
-        if (!context) {
-          setStatus("❌ Không nhận được dữ liệu từ Sheet!", "error");
-          return;
-        }
+      // 2. Upload ảnh từ máy tính
+      function handleAvatarUpload(input) {
+        const file = input.files && input.files[0];
+        if (!file) return;
 
-        currentRowContext = context;
-        document.getElementById("infoCard").style.display = "block";
-        document.getElementById("candidateName").innerText =
-          "Nhân sự: " + (context.fullName || `Dòng #${context.rowIndex}`);
-        document.getElementById("candidateEmail").innerText =
-          "Email: " + (context.email || "N/A");
-
-        // Kiểm tra lỗi nếu backend báo thiếu link ảnh hoặc lỗi file Drive
-        if (context.errorMsg) {
-          setStatus("⚠️ " + context.errorMsg, "error");
-          destroyCropper();
-          return;
-        }
-
-        if (!context.originalImageBase64) {
-          setStatus("❌ Không tìm thấy dữ liệu ảnh gốc!", "error");
-          destroyCropper();
-          return;
-        }
-
-        initCropper(context.originalImageBase64);
-        setStatus(
-          "✅ Đã tải ảnh thành công. Hãy kéo chỉnh khung 1:1!",
-          "success",
-        );
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          loadAvatarImage(e.target.result);
+          showStatus("info", "📷 Đã tải ảnh từ máy tính lên khung xem trước.");
+        };
+        reader.readAsDataURL(file);
       }
 
-      // 2. Khởi tạo Cropper với aspect ratio cố định 1:1
-      function initCropper(imageSrc) {
-        const img = document.getElementById("imagePreview");
-        const placeholder = document.getElementById("placeholderText");
+      // Nạp ảnh: Zoom chuẩn 1.0x và phủ kín khung
+      function loadAvatarImage(src) {
+        avatarImg = new Image();
+        avatarImg.onload = function () {
+          avatarLoaded = true;
 
-        placeholder.style.display = "none";
-        img.style.display = "block";
-        img.src = imageSrc;
+          // Mặc định Zoom là 1.0x, cho phép kéo từ 0.5x đến 3.0x
+          const zoomInput = document.getElementById("zoomScale");
+          zoomInput.value = 1.0;
+          zoomInput.min = 0.5;
+          zoomInput.max = 3.0;
 
-        destroyCropper();
+          document.getElementById("offsetX").value = 0;
+          document.getElementById("offsetY").value = 0;
+          state.rotation = 0;
 
-        cropper = new Cropper(img, {
-          aspectRatio: 1,
-          viewMode: 1,
-          autoCropArea: 0.9,
-          responsive: true,
-        });
+          document.getElementById("zoomScale").disabled = false;
+          document.getElementById("offsetX").disabled = false;
+          document.getElementById("offsetY").disabled = false;
+          document.getElementById("btnRotLeft").disabled = false;
+          document.getElementById("btnRotRight").disabled = false;
+          document.getElementById("save-btn").disabled = false;
+          document.getElementById("download-btn").disabled = false;
 
-        document.getElementById("btnRotLeft").disabled = false;
-        document.getElementById("btnRotRight").disabled = false;
-        document.getElementById("btnSave").disabled = false;
+          renderCanvas();
+        };
+        avatarImg.src = src;
       }
 
-      function destroyCropper() {
-        if (cropper) {
-          cropper.destroy();
-          cropper = null;
+      // 3. Render Canvas (Khung vuông cố định ở tâm 500, 500)
+      // Render Canvas: Loại bỏ lớp phủ xám thừa, vẽ viền đỏ mỏng sát mép
+      function renderCanvas() {
+        const zoom =
+          parseFloat(document.getElementById("zoomScale").value) || 1.0;
+        const offsetX = parseInt(document.getElementById("offsetX").value) || 0;
+        const offsetY = parseInt(document.getElementById("offsetY").value) || 0;
+
+        document.getElementById("zoomVal").innerText = zoom.toFixed(2) + "x";
+        document.getElementById("xVal").innerText = offsetX + "px";
+        document.getElementById("yVal").innerText = offsetY + "px";
+
+        ctx.clearRect(0, 0, 1000, 1000);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, 1000, 1000);
+
+        if (avatarLoaded) {
+          ctx.save();
+          // Cắt trọn 1000x1000
+          ctx.beginPath();
+          ctx.rect(0, 0, 1000, 1000);
+          ctx.clip();
+
+          // Tính toán sao cho cạnh nhỏ nhất của ảnh phủ kín 1000px ở zoom = 1.0
+          const minDim = Math.min(avatarImg.width, avatarImg.height);
+          const baseScale = 1000 / minDim;
+          const drawW = avatarImg.width * baseScale * zoom;
+          const drawH = avatarImg.height * baseScale * zoom;
+
+          ctx.translate(500 + offsetX, 500 + offsetY);
+          ctx.rotate((state.rotation * Math.PI) / 180);
+          ctx.drawImage(avatarImg, -drawW / 2, -drawH / 2, drawW, drawH);
+          ctx.restore();
+
+          // Đường gióng 1/3 mờ hỗ trợ căn góc mặt
+          ctx.save();
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(333.3, 0);
+          ctx.lineTo(333.3, 1000);
+          ctx.moveTo(666.6, 0);
+          ctx.lineTo(666.6, 1000);
+          ctx.moveTo(0, 333.3);
+          ctx.lineTo(1000, 333.3);
+          ctx.moveTo(0, 666.6);
+          ctx.lineTo(1000, 666.6);
+          ctx.stroke();
+
+          // Viền đỏ bao quanh khung hình
+          ctx.strokeStyle = "#ef403e";
+          ctx.lineWidth = 6;
+          ctx.strokeRect(0, 0, 1000, 1000);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = "#80868b";
+          ctx.font = "16px sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText("Chưa có ảnh nhân sự nào được chọn", 500, 500);
         }
-        document.getElementById("btnRotLeft").disabled = true;
-        document.getElementById("btnRotRight").disabled = true;
-        document.getElementById("btnSave").disabled = true;
       }
 
       function rotateImage(deg) {
-        if (cropper) cropper.rotate(deg);
+        state.rotation = (state.rotation + deg + 360) % 360;
+        renderCanvas();
       }
 
-      // 3. Xuất Base64 và gửi lên backend lưu vào Drive
-      function saveCroppedAvatar() {
-        if (!cropper || !currentRowContext) return;
+      // 4. BẮT SỰ KIỆN KÉO THẢ CHUỘT TRỰC TIẾP TRÊN KHUNG VUÔNG
+      container.addEventListener("mousedown", (e) => {
+        if (!avatarLoaded) return;
+        state.isDragging = true;
+        const scaleFactor = 1000 / container.clientWidth;
+        const currentX =
+          parseInt(document.getElementById("offsetX").value) || 0;
+        const currentY =
+          parseInt(document.getElementById("offsetY").value) || 0;
 
-        setStatus("⏳ Đang xuất ảnh và lưu lên Google Drive...", "info");
-        document.getElementById("btnSave").disabled = true;
+        state.startX = e.clientX * scaleFactor - currentX;
+        state.startY = e.clientY * scaleFactor - currentY;
+      });
 
-        const canvas = cropper.getCroppedCanvas({
-          width: 500,
-          height: 500,
-        });
+      window.addEventListener("mousemove", (e) => {
+        if (!state.isDragging || !avatarLoaded) return;
+        const scaleFactor = 1000 / container.clientWidth;
+        const newX = Math.round(e.clientX * scaleFactor - state.startX);
+        const newY = Math.round(e.clientY * scaleFactor - state.startY);
 
-        const base64Data = canvas.toDataURL("image/jpeg", 0.9);
+        document.getElementById("offsetX").value = Math.max(
+          -400,
+          Math.min(400, newX),
+        );
+        document.getElementById("offsetY").value = Math.max(
+          -400,
+          Math.min(400, newY),
+        );
+        renderCanvas();
+      });
+
+      window.addEventListener("mouseup", () => {
+        state.isDragging = false;
+      });
+
+      // 5. LƯU LÊN GOOGLE DRIVE
+      function handleSaveToDrive() {
+        if (!avatarLoaded) return;
+
+        const btn = document.getElementById("save-btn");
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>Đang lưu lên Drive...';
+        clearStatus();
+
+        // Canvas phụ trích xuất phần ảnh vuông 800x800 bên trong CROP_BOX
+        const exportCanvas = document.createElement("canvas");
+        exportCanvas.width = 800;
+        exportCanvas.height = 800;
+        const outCtx = exportCanvas.getContext("2d");
+
+        const zoom =
+          parseFloat(document.getElementById("zoomScale").value) || 1.0;
+        const offsetX = parseInt(document.getElementById("offsetX").value) || 0;
+        const offsetY = parseInt(document.getElementById("offsetY").value) || 0;
+
+        outCtx.fillStyle = "#FFFFFF";
+        outCtx.fillRect(0, 0, 800, 800);
+
+        outCtx.save();
+        const exportRatio = 800 / CROP_BOX.size;
+        outCtx.scale(exportRatio, exportRatio);
+
+        const aspect = avatarImg.width / avatarImg.height;
+        let drawW = CROP_BOX.size * zoom;
+        let drawH = (CROP_BOX.size / aspect) * zoom;
+
+        // Dịch chuyển về tâm của ảnh vuông 800 (tức CROP_BOX.size / 2)
+        outCtx.translate(
+          CROP_BOX.size / 2 + offsetX,
+          CROP_BOX.size / 2 + offsetY,
+        );
+        outCtx.rotate((state.rotation * Math.PI) / 180);
+        outCtx.drawImage(avatarImg, -drawW / 2, -drawH / 2, drawW, drawH);
+        outCtx.restore();
+
+        const base64Data = exportCanvas.toDataURL("image/jpeg", 0.92);
+        const rowIndex = currentRowContext ? currentRowContext.rowIndex : null;
         const safeName = (
-          currentRowContext.fullName ||
-          `candidate_${currentRowContext.rowIndex}`
+          (currentRowContext && currentRowContext.fullName) ||
+          `candidate_${rowIndex || "new"}`
         )
           .toLowerCase()
           .replace(/[^a-z0-9]/g, "_");
         const fileName = `${safeName}_avatar_1x1.jpg`;
 
-        google.script.run
-          .withSuccessHandler((res) => {
-            setStatus(
-              "✅ Lưu ảnh thành công! Link đã cập nhật vào Sheet.",
-              "success",
-            );
-            document.getElementById("btnSave").disabled = false;
-          })
-          .withFailureHandler((err) => {
-            setStatus("❌ Lỗi khi lưu: " + (err.message || err), "error");
-            document.getElementById("btnSave").disabled = false;
-          })
-          .cropperApi_saveCroppedAvatar(
-            currentRowContext.rowIndex,
-            base64Data,
-            fileName,
+        if (!rowIndex) {
+          showStatus(
+            "error",
+            "⚠️ Bạn đang mở ảnh từ máy tính mà chưa chọn dòng nào trên Sheet!",
           );
+          btn.disabled = false;
+          btn.innerHTML = "💾 Lưu Avatar 1:1 lên Drive & Cập nhật Sheet";
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(function (res) {
+            btn.disabled = false;
+            btn.innerHTML = "💾 Lưu Avatar 1:1 lên Drive & Cập nhật Sheet";
+            showStatus(
+              "success",
+              `✅ Đã lưu ảnh 1:1 lên Drive & cập nhật vào cột <b>Ảnh 1:1</b> dòng #${rowIndex} thành công!`,
+            );
+          })
+          .withFailureHandler(function (err) {
+            btn.disabled = false;
+            btn.innerHTML = "💾 Lưu Avatar 1:1 lên Drive & Cập nhật Sheet";
+            showStatus("error", "❌ Lỗi khi lưu: " + (err.message || err));
+          })
+          .cropperApi_saveCroppedAvatar(rowIndex, base64Data, fileName);
       }
+
+      // 6. TẢI ẢNH VỀ MÁY TÍNH
+      function downloadImage() {
+        if (!avatarLoaded) return;
+
+        const exportCanvas = document.createElement("canvas");
+        exportCanvas.width = 800;
+        exportCanvas.height = 800;
+        const outCtx = exportCanvas.getContext("2d");
+
+        const zoom =
+          parseFloat(document.getElementById("zoomScale").value) || 1.0;
+        const offsetX = parseInt(document.getElementById("offsetX").value) || 0;
+        const offsetY = parseInt(document.getElementById("offsetY").value) || 0;
+
+        outCtx.fillStyle = "#FFFFFF";
+        outCtx.fillRect(0, 0, 800, 800);
+
+        outCtx.save();
+        const exportRatio = 800 / CROP_BOX.size;
+        outCtx.scale(exportRatio, exportRatio);
+
+        const aspect = avatarImg.width / avatarImg.height;
+        let drawW = CROP_BOX.size * zoom;
+        let drawH = (CROP_BOX.size / aspect) * zoom;
+
+        outCtx.translate(
+          CROP_BOX.size / 2 + offsetX,
+          CROP_BOX.size / 2 + offsetY,
+        );
+        outCtx.rotate((state.rotation * Math.PI) / 180);
+        outCtx.drawImage(avatarImg, -drawW / 2, -drawH / 2, drawW, drawH);
+        outCtx.restore();
+
+        const name =
+          currentRowContext && currentRowContext.fullName
+            ? currentRowContext.fullName.replace(/\s+/g, "_")
+            : "Avatar_1x1";
+
+        const link = document.createElement("a");
+        link.download = `${name}_1x1.jpg`;
+        link.href = exportCanvas.toDataURL("image/jpeg", 0.95);
+        link.click();
+      }
+
+      // Khởi tạo ban đầu
+      renderCanvas();
+      loadSelectedRow();
     </script>
   </body>
 </html>
