@@ -309,7 +309,7 @@
 
       <!-- NÚT LƯU LÊN DRIVE VÀ TẢI VỀ MÁY -->
       <button id="save-btn" class="btn" onclick="handleSaveToDrive()" disabled>
-        💾 Lưu Avatar 1:1 lên Drive & Cập nhật Sheet
+        💾 Lưu Avatar lên Drive & Cập nhật Sheet
       </button>
       <button
         id="download-btn"
@@ -363,7 +363,7 @@
         const btn = document.getElementById("load-btn");
         btn.disabled = true;
         btn.innerHTML =
-          '<span class="spinner"></span>Đang đọc dòng trên Sheet...';
+          '<span class="spinner"></span>Đang lấy ảnh avatar từ Sheet...';
         clearStatus();
 
         google.script.run
@@ -502,7 +502,6 @@
           ctx.fillStyle = "#80868b";
           ctx.font = "16px sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText("Chưa có ảnh nhân sự nào được chọn", 500, 500);
         }
       }
 
