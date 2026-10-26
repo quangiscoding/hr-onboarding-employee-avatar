@@ -1,7 +1,21 @@
-**/**
-!src/**
-!src/appsscript.json
-node_modules/**
+# Dependencies & Package Managers
+
+node_modules/\*\*
 pnpm-lock.yaml
 package.json
-README.md
+
+# Tooling & Configs
+
+.git/**
+.gitignore
+.clasp.json
+.claspignore
+**/\*.md
+docs/**
+scripts/**
+CLAUDE.md
+
+# Build & System Files
+
+.DS_Store
+\*.log
