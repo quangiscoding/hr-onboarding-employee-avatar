@@ -1,11 +1,8 @@
 /**
  * src/avatar-cropper/cropper.service.js
  */
-
 class AvatarCropperService {
-  /**
-   * Khởi tạo và hiển thị Sidebar công cụ
-   */
+  // Khởi tạo và hiển thị Sidebar công cụ
   static openCropperSidebar() {
     const htmlOutput = HtmlService.createTemplateFromFile(
       "avatar-cropper/cropper-sidebar",
@@ -13,12 +10,12 @@ class AvatarCropperService {
       .evaluate()
       .setTitle("✂️ Chuẩn hóa Avatar 1:1")
       .setWidth(360);
-
     SpreadsheetApp.getUi().showSidebar(htmlOutput);
   }
 
   /**
    * Trích xuất thông tin nhân sự và dữ liệu ảnh từ dòng đang chọn
+   * Lấy CHÍNH XÁC theo cấu hình cột CROPPER_CONFIG, KHÔNG DÒ TÌM LUNG TUNG.
    */
   static getSelectedRowContext() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -41,7 +38,7 @@ class AvatarCropperService {
       throw new Error("Bảng tính hiện không có dữ liệu cột!");
     }
 
-    // 1. Quét map tiêu đề cột (chuẩn hóa không dấu, chữ thường)[cite: 6]
+    // 1. Quét map tiêu đề cột chính xác (chuẩn hóa không dấu, chữ thường)
     const headerValues = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     const colMap = {};
     headerValues.forEach((h, idx) => {
@@ -50,73 +47,56 @@ class AvatarCropperService {
       }
     });
 
-    // 2. Định vị linh hoạt các cột cần thiết
-    const possiblePictureHeaders = [
-      "picture",
-      "avatar",
-      "anh",
-      "anhdaidien",
-      "photo",
-      "linkanh",
-      "pictureurl",
-    ];
-    let pictureColIdx = -1;
-    for (const key of possiblePictureHeaders) {
-      if (colMap[key]) {
-        pictureColIdx = colMap[key];
-        break;
-      }
-    }
+    // 2. Định vị CHÍNH XÁC vị trí các cột từ CROPPER_CONFIG
+    const colKeyName = AvatarCropperUtil.normalizeHeader(
+      CROPPER_CONFIG.COLUMNS.EMPLOYEE_NAME,
+    );
+    const colKeyPicture = AvatarCropperUtil.normalizeHeader(
+      CROPPER_CONFIG.COLUMNS.PICTURE,
+    );
+    const colKeyEmail = AvatarCropperUtil.normalizeHeader(
+      CROPPER_CONFIG.COLUMNS.EMAIL || "Email Address",
+    );
 
-    const possibleNameHeaders = [
-      "hovaten",
-      "fullname",
-      "hoten",
-      "name",
-      "ungvien",
-    ];
-    let nameColIdx = -1;
-    for (const key of possibleNameHeaders) {
-      if (colMap[key]) {
-        nameColIdx = colMap[key];
-        break;
-      }
-    }
+    const nameColIdx = colMap[colKeyName] || -1;
+    const pictureColIdx = colMap[colKeyPicture] || -1;
+    const emailColIdx = colMap[colKeyEmail] || -1;
 
-    const possibleEmailHeaders = [
-      "emailaddress",
-      "email",
-      "personalemail",
-      "workingemail",
-      "emailcanhan",
-    ];
-    let emailColIdx = -1;
-    for (const key of possibleEmailHeaders) {
-      if (colMap[key]) {
-        emailColIdx = colMap[key];
-        break;
-      }
+    // Bắt buộc phải có cột Tên và cột Picture trên Sheet
+    if (nameColIdx === -1) {
+      throw new Error(
+        `Không tìm thấy cột [${CROPPER_CONFIG.COLUMNS.EMPLOYEE_NAME}] trên hàng tiêu đề của Sheet!`,
+      );
+    }
+    if (pictureColIdx === -1) {
+      throw new Error(
+        `Không tìm thấy cột [${CROPPER_CONFIG.COLUMNS.PICTURE}] trên hàng tiêu đề của Sheet!`,
+      );
     }
 
     // 3. Đọc dữ liệu dòng hiện tại
     const rowValues = sheet.getRange(rowIndex, 1, 1, lastCol).getValues()[0];
-    const fullName =
-      nameColIdx !== -1 ? String(rowValues[nameColIdx - 1] || "").trim() : "";
+    const fullName = String(rowValues[nameColIdx - 1] || "").trim();
+    const rawPictureUrl = String(rowValues[pictureColIdx - 1] || "").trim();
     const email =
       emailColIdx !== -1 ? String(rowValues[emailColIdx - 1] || "").trim() : "";
-    const rawPictureUrl =
-      pictureColIdx !== -1
-        ? String(rowValues[pictureColIdx - 1] || "").trim()
-        : "";
 
+    // ✅ TẠO SẴN TÊN FILE CHUẨN TỪ AVATARCROPPERUTIL (GIỮ NGUYÊN DẤU TIẾNG VIỆT)
+    const generatedFileName = AvatarCropperUtil.buildAvatarFileName(
+      { fullName, rowIndex },
+      "avatar_1x1",
+    );
+
+    // Nếu chưa có link ảnh ở cột Picture
     if (!rawPictureUrl) {
       return {
         rowIndex: rowIndex,
         fullName: fullName,
         email: email,
+        fileName: generatedFileName,
         rawPictureUrl: "",
         originalImageBase64: null,
-        errorMsg: `Dòng #${rowIndex} (${fullName || "Nhân sự"}) chưa có link ảnh ở cột Picture / Avatar!`,
+        errorMsg: `Dòng #${rowIndex} (${fullName || "Nhân sự"}) chưa có link ảnh ở cột ${CROPPER_CONFIG.COLUMNS.PICTURE}!`,
       };
     }
 
@@ -127,6 +107,7 @@ class AvatarCropperService {
         rowIndex: rowIndex,
         fullName: fullName,
         email: email,
+        fileName: generatedFileName,
         rawPictureUrl: rawPictureUrl,
         originalImageBase64: null,
         errorMsg: `Không nhận diện được ID Google Drive từ link: "${rawPictureUrl}"`,
@@ -145,16 +126,19 @@ class AvatarCropperService {
         rowIndex: rowIndex,
         fullName: fullName,
         email: email,
+        fileName: generatedFileName,
         rawPictureUrl: rawPictureUrl,
         originalImageBase64: null,
         errorMsg: `Không thể đọc file Drive (ID: ${driveFileId}): ${err.message}`,
       };
     }
 
+    // Trả về đầy đủ context kèm fileName chuẩn cho Sidebar sử dụng
     return {
       rowIndex: rowIndex,
       fullName: fullName,
       email: email,
+      fileName: generatedFileName,
       rawPictureUrl: rawPictureUrl,
       driveFileId: driveFileId,
       originalImageBase64: originalImageBase64,
@@ -175,19 +159,16 @@ class AvatarCropperService {
     if (base64Data.indexOf(",") !== -1) {
       base64Content = base64Data.split(",")[1];
     }
-
     const decodedBytes = Utilities.base64Decode(base64Content);
     const mimeType =
       (CROPPER_CONFIG.OUTPUT_IMAGE && CROPPER_CONFIG.OUTPUT_IMAGE.MIME_TYPE) ||
       "image/jpeg";
     const finalFileName = fileName || `avatar_row_${rowIndex}.jpg`;
-
     const blob = Utilities.newBlob(decodedBytes, mimeType, finalFileName);
 
-    // 2. Xác định Folder lưu trữ (Kiểm tra chuỗi rỗng chặt chẽ để tránh Invalid argument)
+    // 2. Xác định Folder lưu trữ
     let folder;
     const folderId = (CROPPER_CONFIG.STORAGE_FOLDER_ID || "").trim();
-
     if (folderId !== "") {
       try {
         folder = DriveApp.getFolderById(folderId);
@@ -198,14 +179,13 @@ class AvatarCropperService {
         folder = DriveApp.getRootFolder();
       }
     } else {
-      // Mặc định lưu tại My Drive gốc nếu không cấu hình folder
       folder = DriveApp.getRootFolder();
     }
 
     // 3. Tạo file trên Drive
     const savedFile = folder.createFile(blob);
 
-    // 4. Cấp quyền chia sẻ (bọc try-catch chống chặn quyền từ Workspace domain)
+    // 4. Cấp quyền chia sẻ
     try {
       savedFile.setSharing(
         DriveApp.Access.ANYONE_WITH_LINK,
@@ -217,7 +197,6 @@ class AvatarCropperService {
           shareErr.message,
       );
     }
-
     const fileUrl = savedFile.getUrl();
 
     // 5. Ghi link vào Sheet UC06 tại cột "Ảnh 1:1"
@@ -225,12 +204,11 @@ class AvatarCropperService {
     const lastCol = sheet.getLastColumn();
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
-    // Chuẩn hóa tên cột kết quả từ CROPPER_CONFIG.COLUMNS.SQUARE_PICTURE ("Ảnh 1:1")
+    // Chuẩn hóa tên cột kết quả từ CROPPER_CONFIG.COLUMNS.SQUARE_PICTURE
     const targetHeaderKey = AvatarCropperUtil.normalizeHeader(
       CROPPER_CONFIG.COLUMNS.SQUARE_PICTURE,
     );
     let targetColIndex = -1;
-
     for (let i = 0; i < headers.length; i++) {
       if (AvatarCropperUtil.normalizeHeader(headers[i]) === targetHeaderKey) {
         targetColIndex = i + 1; // 1-indexed

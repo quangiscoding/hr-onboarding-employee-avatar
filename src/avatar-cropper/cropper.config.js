@@ -15,9 +15,10 @@ const CROPPER_CONFIG = {
 
   // Bản đồ tên cột trên sheet UC06 mà feature này thao tác
   COLUMNS: {
-    EMPLOYEE_NAME: "Employee Name",
-    PICTURE: "Picture",
-    CHECK_SQUARE: "Check 1:1",
-    SQUARE_PICTURE: "Ảnh 1:1",
+    EMPLOYEE_NAME: "Employee Name", // Cột A
+    EMAIL: "Email Address", // Cột B (hỗ trợ đối soát email nếu cần)
+    PICTURE: "Picture", // Cột F
+    CHECK_SQUARE: "Check 1:1", // Cột G
+    SQUARE_PICTURE: "Ảnh 1:1", // Cột H
   },
 };

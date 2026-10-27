@@ -407,7 +407,7 @@
         reader.readAsDataURL(file);
       }
 
-      // Nạp ảnh: Zoom chuẩn 1.0x và phủ kín khung
+      // Nạp ảnh: Zoom 1.0x
       function loadAvatarImage(src) {
         avatarImg = new Image();
         avatarImg.onload = function () {
@@ -437,7 +437,6 @@
       }
 
       // 3. Render Canvas (Khung vuông cố định ở tâm 500, 500)
-      // Render Canvas: Loại bỏ lớp phủ xám thừa, vẽ viền đỏ mỏng sát mép
       function renderCanvas() {
         const zoom =
           parseFloat(document.getElementById("zoomScale").value) || 1.0;
@@ -535,7 +534,6 @@
       // 5. LƯU LÊN GOOGLE DRIVE
       function handleSaveToDrive() {
         if (!avatarLoaded) return;
-
         const btn = document.getElementById("save-btn");
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span>Đang lưu lên Drive...';
@@ -546,7 +544,6 @@
         exportCanvas.width = 800;
         exportCanvas.height = 800;
         const outCtx = exportCanvas.getContext("2d");
-
         const zoom =
           parseFloat(document.getElementById("zoomScale").value) || 1.0;
         const offsetX = parseInt(document.getElementById("offsetX").value) || 0;
@@ -554,16 +551,14 @@
 
         outCtx.fillStyle = "#FFFFFF";
         outCtx.fillRect(0, 0, 800, 800);
-
         outCtx.save();
         const exportRatio = 800 / CROP_BOX.size;
         outCtx.scale(exportRatio, exportRatio);
-
         const aspect = avatarImg.width / avatarImg.height;
         let drawW = CROP_BOX.size * zoom;
         let drawH = (CROP_BOX.size / aspect) * zoom;
 
-        // Dịch chuyển về tâm của ảnh vuông 800 (tức CROP_BOX.size / 2)
+        // Dịch chuyển về tâm của ảnh vuông 800
         outCtx.translate(
           CROP_BOX.size / 2 + offsetX,
           CROP_BOX.size / 2 + offsetY,
@@ -574,13 +569,6 @@
 
         const base64Data = exportCanvas.toDataURL("image/jpeg", 0.92);
         const rowIndex = currentRowContext ? currentRowContext.rowIndex : null;
-        const safeName = (
-          (currentRowContext && currentRowContext.fullName) ||
-          `candidate_${rowIndex || "new"}`
-        )
-          .toLowerCase()
-          .replace(/[^a-z0-9]/g, "_");
-        const fileName = `${safeName}_avatar_1x1.jpg`;
 
         if (!rowIndex) {
           showStatus(
@@ -591,6 +579,12 @@
           btn.innerHTML = "💾 Lưu Avatar 1:1 lên Drive & Cập nhật Sheet";
           return;
         }
+
+        // Lấy trực tiếp tên file chuẩn hóa (nguyên dấu) do backend tạo sẵn
+        const fileName =
+          currentRowContext && currentRowContext.fileName
+            ? currentRowContext.fileName
+            : `candidate_${rowIndex}_avatar_1x1.jpg`;
 
         google.script.run
           .withSuccessHandler(function (res) {
@@ -612,12 +606,10 @@
       // 6. TẢI ẢNH VỀ MÁY TÍNH
       function downloadImage() {
         if (!avatarLoaded) return;
-
         const exportCanvas = document.createElement("canvas");
         exportCanvas.width = 800;
         exportCanvas.height = 800;
         const outCtx = exportCanvas.getContext("2d");
-
         const zoom =
           parseFloat(document.getElementById("zoomScale").value) || 1.0;
         const offsetX = parseInt(document.getElementById("offsetX").value) || 0;
@@ -625,11 +617,9 @@
 
         outCtx.fillStyle = "#FFFFFF";
         outCtx.fillRect(0, 0, 800, 800);
-
         outCtx.save();
         const exportRatio = 800 / CROP_BOX.size;
         outCtx.scale(exportRatio, exportRatio);
-
         const aspect = avatarImg.width / avatarImg.height;
         let drawW = CROP_BOX.size * zoom;
         let drawH = (CROP_BOX.size / aspect) * zoom;
@@ -642,13 +632,14 @@
         outCtx.drawImage(avatarImg, -drawW / 2, -drawH / 2, drawW, drawH);
         outCtx.restore();
 
-        const name =
-          currentRowContext && currentRowContext.fullName
-            ? currentRowContext.fullName.replace(/\s+/g, "_")
-            : "Avatar_1x1";
+        // ✅ ĐÃ CẬP NHẬT: Tái sử dụng fileName từ context (giữ nguyên dấu tiếng Việt)
+        const downloadFileName =
+          currentRowContext && currentRowContext.fileName
+            ? currentRowContext.fileName.replace("_avatar_1x1.jpg", "_1x1.jpg")
+            : "Avatar_1x1.jpg";
 
         const link = document.createElement("a");
-        link.download = `${name}_1x1.jpg`;
+        link.download = downloadFileName;
         link.href = exportCanvas.toDataURL("image/jpeg", 0.95);
         link.click();
       }

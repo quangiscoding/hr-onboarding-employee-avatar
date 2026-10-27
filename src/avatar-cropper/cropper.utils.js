@@ -28,6 +28,27 @@ class AvatarCropperUtil {
   }
 
   /**
+   * Tạo tên file avatar vuông 1:1, giữ nguyên dấu tiếng Việt và loại bỏ ký tự cấm của OS
+   * @param {Object} rowContext - Object thông tin dòng hiện tại { fullName, rowIndex }
+   * @param {string} suffix - Hậu tố ('avatar_1x1' hoặc '1x1')
+   * @returns {string} Tên file hoàn chỉnh (VD: "Hoàng Thị Thùy Trang_avatar_1x1.jpg")
+   */
+  static buildAvatarFileName(rowContext, suffix = "avatar_1x1") {
+    const rowIndex = rowContext ? rowContext.rowIndex : null;
+    const rawFullName =
+      rowContext && rowContext.fullName
+        ? String(rowContext.fullName).trim()
+        : "";
+
+    // Giữ nguyên dấu tiếng Việt, loại bỏ ký tự cấm: \ / : * ? " < > | và chuẩn hóa khoảng trắng
+    const cleanName = rawFullName
+      ? rawFullName.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ")
+      : `candidate_${rowIndex || "new"}`;
+
+    return `${cleanName}_${suffix}.jpg`;
+  }
+
+  /**
    * Chuẩn hóa tiêu đề cột (xóa dấu tiếng Việt, ký tự đặc biệt, khoảng trắng thừa)[cite: 6]
    * @param {string} header
    * @returns {string}
