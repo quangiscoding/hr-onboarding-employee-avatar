@@ -11,9 +11,7 @@
         font-size: 13px;
         color: #202124;
         margin: 0;
-        padding: 8px 10px;
         max-width: 100%;
-        background-color: #ffffff;
         user-select: none;
       }
       h2 {
@@ -35,10 +33,6 @@
         margin: 10px 0 6px;
       }
       .card {
-        background: #fff;
-        border: 1px solid #e8eaed;
-        border-radius: 6px;
-        padding: 8px 10px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
       }
 
@@ -47,9 +41,7 @@
         width: 100%;
         text-align: center;
         background: #f8f9fa;
-        border: 1px dashed #dadce0;
         border-radius: 6px;
-        padding: 6px;
         cursor: grab;
       }
       .canvas-container:active {
@@ -229,7 +221,7 @@
           class="btn-secondary"
           onclick="document.getElementById('avatar-input').click()"
         >
-          📷 Upload Ảnh khác từ máy tính
+          Upload Ảnh khác từ máy tính
         </button>
         <input
           type="file"
@@ -239,7 +231,7 @@
         />
       </div>
 
-      <!-- THANH TRƯỢT BỘ ĐIỀU CHỈNH (CHUẨN WELCOME ONBOARD) -->
+      <!-- THANH TRƯỢT BỘ ĐIỀU CHỈNH -->
       <div style="margin-top: 10px">
         <div class="control-row">
           <label>Zoom:</label>
@@ -309,7 +301,7 @@
 
       <!-- NÚT LƯU LÊN DRIVE VÀ TẢI VỀ MÁY -->
       <button id="save-btn" class="btn" onclick="handleSaveToDrive()" disabled>
-        💾 Lưu Avatar lên Drive & Cập nhật Sheet
+        Lưu Avatar lên Drive & Cập nhật Sheet
       </button>
       <button
         id="download-btn"
@@ -317,7 +309,7 @@
         onclick="downloadImage()"
         disabled
       >
-        ⬇️ Tải ảnh về máy (.JPG)
+        Tải ảnh về máy (.JPG)
       </button>
     </div>
 
@@ -369,7 +361,7 @@
         google.script.run
           .withSuccessHandler(function (res) {
             btn.disabled = false;
-            btn.innerHTML = "📥 Đọc ảnh từ dòng đang chọn";
+            btn.innerHTML = "Đọc ảnh từ dòng đang chọn";
 
             if (!res) {
               showStatus("error", "❌ Không nhận được dữ liệu từ Sheet.");
@@ -391,13 +383,13 @@
             loadAvatarImage(res.originalImageBase64);
             showStatus(
               "success",
-              `✅ Đã đọc ảnh của: <b>${res.fullName || "Dòng #" + res.rowIndex}</b>. Căn chỉnh vị trí rồi bấm Lưu.`,
+              `Đã đọc ảnh của: <b>${res.fullName || "Dòng #" + res.rowIndex}</b>. Căn chỉnh vị trí rồi bấm Lưu.`,
             );
           })
           .withFailureHandler(function (err) {
             btn.disabled = false;
-            btn.innerHTML = "📥 Đọc ảnh từ dòng đang chọn";
-            showStatus("error", "❌ Lỗi: " + (err.message || err));
+            btn.innerHTML = "Đọc ảnh từ dòng đang chọn";
+            showStatus("error", "Lỗi: " + (err.message || err));
           })
           .cropperApi_getSelectedRowContext();
       }
@@ -492,11 +484,6 @@
           ctx.moveTo(0, 666.6);
           ctx.lineTo(1000, 666.6);
           ctx.stroke();
-
-          // Viền đỏ bao quanh khung hình
-          ctx.strokeStyle = "#ef403e";
-          ctx.lineWidth = 6;
-          ctx.strokeRect(0, 0, 1000, 1000);
           ctx.restore();
         } else {
           ctx.fillStyle = "#80868b";
