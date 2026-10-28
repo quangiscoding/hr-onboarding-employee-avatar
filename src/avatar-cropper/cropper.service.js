@@ -13,10 +13,8 @@ class AvatarCropperService {
     SpreadsheetApp.getUi().showSidebar(htmlOutput);
   }
 
-  /**
-   * Trích xuất thông tin nhân sự và dữ liệu ảnh từ dòng đang chọn
-   * Lấy CHÍNH XÁC theo cấu hình cột CROPPER_CONFIG, KHÔNG DÒ TÌM LUNG TUNG.
-   */
+  // Trích xuất thông tin nhân sự và dữ liệu ảnh từ dòng đang chọn
+  // Lấy CHÍNH XÁC theo cấu hình cột CROPPER_CONFIG, KHÔNG DÒ TÌM LUNG TUNG.
   static getSelectedRowContext() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getActiveSheet();
@@ -81,7 +79,7 @@ class AvatarCropperService {
     const email =
       emailColIdx !== -1 ? String(rowValues[emailColIdx - 1] || "").trim() : "";
 
-    // ✅ TẠO SẴN TÊN FILE CHUẨN TỪ AVATARCROPPERUTIL (GIỮ NGUYÊN DẤU TIẾNG VIỆT)
+    // Tạo sẵn tên file chuẩn từ AvatarCropperUtil (giữ nguyên dấu tiếng Việt)
     const generatedFileName = AvatarCropperUtil.buildAvatarFileName(
       { fullName, rowIndex },
       "avatar_1x1",
@@ -146,6 +144,94 @@ class AvatarCropperService {
     };
   }
 
+  // Lấy cấu hình folder lưu trữ hiện tại
+  // Thứ tự ưu tiên: UserProperties -> CROPPER_CONFIG.STORAGE_FOLDER_ID -> Root My Drive
+  static getStorageFolderConfig() {
+    try {
+      const userFolderId = PropertiesService.getUserProperties().getProperty(
+        "AVATAR_STORAGE_FOLDER_ID",
+      );
+      const activeFolderId = (
+        userFolderId ||
+        CROPPER_CONFIG.STORAGE_FOLDER_ID ||
+        ""
+      ).trim();
+
+      let folderName = "My Drive (Mặc định)";
+      if (activeFolderId) {
+        try {
+          folderName = DriveApp.getFolderById(activeFolderId).getName();
+        } catch (e) {
+          folderName = "Folder ID không hợp lệ hoặc thiếu quyền";
+        }
+      }
+
+      return {
+        ok: true,
+        folderId: activeFolderId,
+        folderName: folderName,
+        isCustom: Boolean(userFolderId),
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        folderId: "",
+        folderName: "My Drive (Mặc định)",
+        isCustom: false,
+      };
+    }
+  }
+
+  /**
+   * Lưu cấu hình Folder ID vào UserProperties
+   */
+  static setStorageFolderConfig(folderInput) {
+    try {
+      const rawInput = String(folderInput || "").trim();
+
+      // Nếu truyền chuỗi rỗng: xóa config người dùng, quay về mặc định
+      if (!rawInput) {
+        PropertiesService.getUserProperties().deleteProperty(
+          "AVATAR_STORAGE_FOLDER_ID",
+        );
+        const defaultConfig = this.getStorageFolderConfig();
+        return {
+          ok: true,
+          message: "Đã đặt lại thư mục lưu về mặc định.",
+          folderId: defaultConfig.folderId,
+          folderName: defaultConfig.folderName,
+        };
+      }
+
+      const cleanId = AvatarCropperUtil.extractDriveId(rawInput);
+      if (!cleanId) {
+        return {
+          ok: false,
+          message: "Đường link hoặc ID thư mục Google Drive không hợp lệ!",
+        };
+      }
+
+      // Xác thực quyền truy cập thư mục
+      const folder = DriveApp.getFolderById(cleanId);
+      PropertiesService.getUserProperties().setProperty(
+        "AVATAR_STORAGE_FOLDER_ID",
+        cleanId,
+      );
+
+      return {
+        ok: true,
+        folderId: cleanId,
+        folderName: folder.getName(),
+        message: `Đã đổi thư mục lưu sang: ${folder.getName()}`,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        message: "Không thể truy cập thư mục: " + err.message,
+      };
+    }
+  }
+
   /**
    * Lưu ảnh Base64 vào Google Drive và ghi link vào Sheet UC06
    */
@@ -166,9 +252,17 @@ class AvatarCropperService {
     const finalFileName = fileName || `avatar_row_${rowIndex}.jpg`;
     const blob = Utilities.newBlob(decodedBytes, mimeType, finalFileName);
 
-    // 2. Xác định Folder lưu trữ
+    // 2. Xác định Folder lưu trữ (Ưu tiên UserProperties -> CROPPER_CONFIG -> Root)
     let folder;
-    const folderId = (CROPPER_CONFIG.STORAGE_FOLDER_ID || "").trim();
+    const userFolderId = PropertiesService.getUserProperties().getProperty(
+      "AVATAR_STORAGE_FOLDER_ID",
+    );
+    const folderId = (
+      userFolderId ||
+      CROPPER_CONFIG.STORAGE_FOLDER_ID ||
+      ""
+    ).trim();
+
     if (folderId !== "") {
       try {
         folder = DriveApp.getFolderById(folderId);
@@ -237,10 +331,28 @@ class AvatarCropperService {
 // =========================================================================
 // GLOBAL BRIDGES CHO google.script.run
 // =========================================================================
+
+/** Bridge đọc dòng dữ liệu được chọn */
 function cropperApi_getSelectedRowContext() {
   return AvatarCropperService.getSelectedRowContext();
 }
 
+/** Bridge lưu ảnh và ghi URL lên Sheet */
 function cropperApi_saveCroppedAvatar(rowIndex, base64Data, fileName) {
   return AvatarCropperService.saveCroppedAvatar(rowIndex, base64Data, fileName);
+}
+
+/** Bridge đọc cấu hình folder lưu ảnh hiện tại */
+function cropperApi_getStorageFolder() {
+  return AvatarCropperService.getStorageFolderConfig();
+}
+
+/** Bridge cập nhật folder lưu ảnh mới */
+function cropperApi_setStorageFolder(folderInput) {
+  return AvatarCropperService.setStorageFolderConfig(folderInput);
+}
+
+/** Bridge tiện ích: sinh tên file avatar chuẩn hóa */
+function cropperApi_getAvatarFileName(rowContext, suffix) {
+  return AvatarCropperUtil.buildAvatarFileName(rowContext, suffix);
 }
