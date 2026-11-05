@@ -84,12 +84,10 @@ class AvatarCropperUtil {
     try {
       const heraId = CROPPER_CONFIG.HERA_SPREADSHEET_ID;
       if (!heraId) return "Others";
-
       const ss = SpreadsheetApp.openById(heraId);
 
       // 1. Trỏ chính xác vào tab theo GID 335034815 hoặc tên tab "2026"
       const sheet = ss.getSheets().find((s) => String(s.getSheetId()) === "335034815") || ss.getSheetByName("2026") || ss.getSheets()[0];
-
       const lastRow = sheet.getLastRow();
       const lastCol = sheet.getLastColumn();
       if (lastRow < 3) return "Others";
@@ -98,7 +96,6 @@ class AvatarCropperUtil {
       const headerRow = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
       let emailColIdx = -1;
       let squadColIdx = -1;
-
       const targetSquadKey = this.normalizeHeader((CROPPER_CONFIG.HERA_LOOKUP_COLS && CROPPER_CONFIG.HERA_LOOKUP_COLS.SQUAD) || "Squad/ Unit");
       const targetEmailKey = this.normalizeHeader((CROPPER_CONFIG.HERA_LOOKUP_COLS && CROPPER_CONFIG.HERA_LOOKUP_COLS.PERSONAL_EMAIL) || "Personal Email");
 
@@ -130,5 +127,93 @@ class AvatarCropperUtil {
       Logger.log("⚠️ Lỗi tra cứu Squad từ Hera: " + err.message);
     }
     return "Others";
+  }
+
+  /**
+   * Trích xuất width & height của file ảnh từ Google Drive ID bằng binary header
+   * @param {string} fileId - ID của file trên Google Drive
+   * @returns {{ width: number, height: number, isSquare: boolean, ratio: number } | null}
+   */
+  static getImageDimensions(fileId) {
+    try {
+      const file = DriveApp.getFileById(fileId);
+      const blob = file.getBlob();
+      const bytes = blob.getBytes();
+      const contentType = blob.getContentType().toLowerCase();
+      let width = 0;
+      let height = 0;
+
+      // 1. Định dạng PNG
+      if (contentType.includes("png")) {
+        if (bytes.length >= 24) {
+          width = ((bytes[16] & 0xff) << 24) | ((bytes[17] & 0xff) << 16) | ((bytes[18] & 0xff) << 8) | (bytes[19] & 0xff);
+          height = ((bytes[20] & 0xff) << 24) | ((bytes[21] & 0xff) << 16) | ((bytes[22] & 0xff) << 8) | (bytes[23] & 0xff);
+        }
+      }
+      // 2. Định dạng JPEG / JPG
+      else if (contentType.includes("jpeg") || contentType.includes("jpg")) {
+        let offset = 2;
+        while (offset < bytes.length) {
+          if ((bytes[offset] & 0xff) === 0xff) {
+            const marker = bytes[offset + 1] & 0xff;
+            // SOF0, SOF1, SOF2 markers chứa kích thước ảnh
+            if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+              height = ((bytes[offset + 5] & 0xff) << 8) | (bytes[offset + 6] & 0xff);
+              width = ((bytes[offset + 7] & 0xff) << 8) | (bytes[offset + 8] & 0xff);
+              break;
+            }
+            const length = ((bytes[offset + 2] & 0xff) << 8) | (bytes[offset + 3] & 0xff);
+            offset += 2 + length;
+          } else {
+            offset++;
+          }
+        }
+      }
+      // 3. Định dạng GIF
+      else if (contentType.includes("gif")) {
+        if (bytes.length >= 10) {
+          width = (bytes[6] & 0xff) | ((bytes[7] & 0xff) << 8);
+          height = (bytes[8] & 0xff) | ((bytes[9] & 0xff) << 8);
+        }
+      }
+      // 4. Định dạng WEBP
+      else if (contentType.includes("webp")) {
+        if (bytes.length >= 30) {
+          // Simple VP8
+          if (bytes[12] === 0x56 && bytes[13] === 0x50 && bytes[14] === 0x38 && bytes[15] === 0x20) {
+            width = ((bytes[26] & 0xff) | ((bytes[27] & 0xff) << 8)) & 0x3fff;
+            height = ((bytes[28] & 0xff) | ((bytes[29] & 0xff) << 8)) & 0x3fff;
+          }
+          // Extended VP8X
+          else if (bytes[12] === 0x56 && bytes[13] === 0x50 && bytes[14] === 0x38 && bytes[15] === 0x58) {
+            width = 1 + ((bytes[24] & 0xff) | ((bytes[25] & 0xff) << 8) | ((bytes[26] & 0xff) << 16));
+            height = 1 + ((bytes[27] & 0xff) | ((bytes[28] & 0xff) << 8) | ((bytes[29] & 0xff) << 16));
+          }
+        }
+      }
+
+      if (width > 0 && height > 0) {
+        // 1. Tính toán trên số thực chính xác (không làm tròn trước)
+        const rawRatio = width / height;
+        const pixelDiff = Math.abs(width - height);
+        const ratioDiff = Math.abs(rawRatio - 1.0);
+
+        // 2. Tiêu chí: Lệch <= 4 pixel HOẶC lệch tỉ lệ <= 2% (0.02)
+        const isSquare = pixelDiff <= 4 || ratioDiff <= 0.02;
+
+        // 3. Làm tròn ratio để hiển thị/ghi log cho gọn
+        const displayRatio = Number(rawRatio.toFixed(2));
+
+        return {
+          width: width,
+          height: height,
+          ratio: displayRatio,
+          isSquare: isSquare,
+        };
+      }
+    } catch (err) {
+      Logger.log("❌ Lỗi đọc file ID: " + fileId + " - Chi tiết: " + err.message);
+    }
+    return null;
   }
 }

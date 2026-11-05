@@ -286,6 +286,127 @@ class AvatarCropperService {
       folderPath: `${squadName} / ${candidateFolderName}`,
     };
   }
+
+  /**
+   * Quét toàn bộ sheet UC06:
+   * Nếu ảnh gốc (cột Picture) đã là 1:1 và cột "Ảnh 1:1" chưa có link,
+   * tự động tạo bản sao vào đúng thư mục Drive và cập nhật link vào cột "Ảnh 1:1".
+   */
+  static syncSquareOriginalAvatars() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < 2) return { ok: true, count: 0, message: "Sheet chưa có dữ liệu." };
+
+    // 1. Quét map tiêu đề cột
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const colMap = {};
+    headers.forEach((h, idx) => {
+      if (h && String(h).trim() !== "") {
+        colMap[AvatarCropperUtil.normalizeHeader(h)] = idx + 1;
+      }
+    });
+
+    const codeCol = colMap[AvatarCropperUtil.normalizeHeader(CROPPER_CONFIG.COLUMNS.CODE || "Code")] || -1;
+    const nameCol = colMap[AvatarCropperUtil.normalizeHeader(CROPPER_CONFIG.COLUMNS.EMPLOYEE_NAME)] || -1;
+    const emailCol = colMap[AvatarCropperUtil.normalizeHeader(CROPPER_CONFIG.COLUMNS.EMAIL || "Email Address")] || -1;
+    const pictureCol = colMap[AvatarCropperUtil.normalizeHeader(CROPPER_CONFIG.COLUMNS.PICTURE)] || -1;
+    const checkCol = colMap[AvatarCropperUtil.normalizeHeader(CROPPER_CONFIG.COLUMNS.CHECK_SQUARE || "Check 1:1")] || -1;
+    let squareCol = colMap[AvatarCropperUtil.normalizeHeader(CROPPER_CONFIG.COLUMNS.SQUARE_PICTURE || "Ảnh 1:1")] || -1;
+
+    if (pictureCol === -1) {
+      throw new Error(`Không tìm thấy cột [${CROPPER_CONFIG.COLUMNS.PICTURE}] trên sheet!`);
+    }
+
+    // Tự động tạo cột "Ảnh 1:1" nếu trên sheet chưa có
+    if (squareCol === -1) {
+      squareCol = lastCol + 1;
+      sheet.getRange(1, squareCol).setValue(CROPPER_CONFIG.COLUMNS.SQUARE_PICTURE);
+    }
+
+    // 2. Xác định Root Folder lưu trữ theo UserProperties hoặc Config
+    let rootFolder;
+    const userFolderId = PropertiesService.getUserProperties().getProperty("AVATAR_STORAGE_FOLDER_ID");
+    const folderId = (userFolderId || CROPPER_CONFIG.STORAGE_FOLDER_ID || "").trim();
+    if (folderId) {
+      try {
+        rootFolder = DriveApp.getFolderById(folderId);
+      } catch (e) {
+        rootFolder = DriveApp.getRootFolder();
+      }
+    } else {
+      rootFolder = DriveApp.getRootFolder();
+    }
+
+    // 3. Đọc dữ liệu từ dòng 2
+    const numRows = lastRow - 1;
+    const totalCols = Math.max(lastCol, squareCol);
+    const data = sheet.getRange(2, 1, numRows, totalCols).getValues();
+
+    let processedCount = 0;
+
+    data.forEach((row, i) => {
+      const rowIndex = i + 2;
+      const pictureUrl = pictureCol !== -1 ? String(row[pictureCol - 1] || "").trim() : "";
+      const squareUrl = squareCol !== -1 ? String(row[squareCol - 1] || "").trim() : "";
+
+      // Chỉ xử lý các ứng viên có ảnh gốc nhưng chưa có link ở cột "Ảnh 1:1"
+      if (pictureUrl && !squareUrl) {
+        const driveId = AvatarCropperUtil.extractDriveId(pictureUrl);
+        if (!driveId) return;
+
+        // Gọi hàm kiểm tra kích thước trực tiếp từ AvatarCropperUtil
+        const dimensions = AvatarCropperUtil.getImageDimensions(driveId);
+        if (dimensions && dimensions.isSquare) {
+          const empCode = codeCol !== -1 ? String(row[codeCol - 1] || "").trim() : "";
+          const fullName = nameCol !== -1 ? String(row[nameCol - 1] || "").trim() : "";
+          const email = emailCol !== -1 ? String(row[emailCol - 1] || "").trim() : "";
+
+          try {
+            const sourceFile = DriveApp.getFileById(driveId);
+
+            // Cây thư mục: Root -> Squad/Unit -> [<Code>] <FullName>
+            const squadName = AvatarCropperUtil.lookupSquadFromHera(email);
+            const squadFolder = AvatarCropperUtil.getOrCreateFolder(rootFolder, squadName);
+            const candidateFolderName = empCode ? `[${empCode}] ${fullName}` : fullName || `Dòng_${rowIndex}`;
+            const targetFolder = AvatarCropperUtil.getOrCreateFolder(squadFolder, candidateFolderName);
+
+            // Nhân bản file ảnh sang folder đích
+            const safeName = String(fullName || "Candidate")
+              .replace(/[\\/:*?"<>|]/g, "")
+              .trim();
+            const newFileName = empCode ? `[${empCode}] ${safeName}_1x1.jpg` : `${safeName}_1x1.jpg`;
+            const copiedFile = sourceFile.makeCopy(newFileName, targetFolder);
+
+            try {
+              copiedFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            } catch (shareErr) {}
+
+            const copiedUrl = copiedFile.getUrl();
+
+            // Ghi link vào cột "Ảnh 1:1"
+            sheet.getRange(rowIndex, squareCol).setValue(copiedUrl);
+
+            // Đồng bộ luôn trạng thái cột "Check 1:1"
+            if (checkCol !== -1) {
+              sheet.getRange(rowIndex, checkCol).setValue("1:1 (Đã crop)");
+            }
+
+            processedCount++;
+          } catch (err) {
+            Logger.log(`⚠️ Lỗi sao lưu ảnh dòng #${rowIndex}: ${err.message}`);
+          }
+        }
+      }
+    });
+
+    return {
+      ok: true,
+      count: processedCount,
+      message: `Đã tự động sao chép ${processedCount} ảnh đạt chuẩn 1:1 vào thư mục lưu trữ và cập nhật vào Sheet UC06.`,
+    };
+  }
 }
 
 // Global bridges cho google.script.run

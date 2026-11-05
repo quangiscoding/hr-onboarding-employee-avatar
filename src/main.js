@@ -4,7 +4,12 @@
  */
 
 function onOpen() {
-  SpreadsheetApp.getUi().createMenu("🖼️ Avatar Tools").addItem("1. Cắt ảnh nhân sự 1:1", "menuOpenAvatarCropper").addToUi();
+  SpreadsheetApp.getUi()
+    .createMenu("🖼️ Avatar Tools")
+    .addItem("1. Cắt ảnh nhân sự 1:1", "menuOpenAvatarCropper")
+    .addSeparator()
+    .addItem("2. Tự động sao lưu ảnh 1:1 vào Thư mục", "menuSyncSquareAvatars")
+    .addToUi();
 }
 
 /**
@@ -14,6 +19,22 @@ function menuOpenAvatarCropper() {
   AvatarCropperService.openCropperSidebar();
 }
 
+/**
+ * Điều hướng chạy tính năng sao lưu ảnh gốc 1:1 vào thư mục Drive và cập nhật Sheet
+ */
+function menuSyncSquareAvatars() {
+  const ui = SpreadsheetApp.getUi();
+  try {
+    const res = AvatarCropperService.syncSquareOriginalAvatars();
+    ui.alert("Thông báo", res.message, ui.ButtonSet.OK);
+  } catch (err) {
+    ui.alert("Lỗi", "Quá trình đồng bộ thất bại: " + err.message, ui.ButtonSet.OK);
+  }
+}
+
+/**
+ * Hàm debug tra cứu Hera
+ */
 function debugLookupHera() {
   const heraId = CROPPER_CONFIG.HERA_SPREADSHEET_ID;
   const ss = SpreadsheetApp.openById(heraId);
@@ -36,7 +57,6 @@ function debugLookupHera() {
   const allData = targetSheet.getDataRange().getValues();
   const searchEmail = "alissawoon@gmail.com";
   let found = false;
-
   for (let r = 0; r < allData.length; r++) {
     for (let c = 0; c < allData[r].length; c++) {
       if (String(allData[r][c]).toLowerCase().trim() === searchEmail) {
