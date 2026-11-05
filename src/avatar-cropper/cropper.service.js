@@ -127,8 +127,26 @@ class AvatarCropperService {
   // Lấy cấu hình folder lưu trữ hiện tại
   static getStorageFolderConfig() {
     try {
-      const userFolderId = PropertiesService.getUserProperties().getProperty("AVATAR_STORAGE_FOLDER_ID");
-      const activeFolderId = (userFolderId || CROPPER_CONFIG.STORAGE_FOLDER_ID || "").trim();
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+      // 1. Ưu tiên đọc từ UserProperties
+      let activeFolderId = PropertiesService.getUserProperties().getProperty("AVATAR_STORAGE_FOLDER_ID");
+
+      // 2. Nếu UserProperties chưa có, đọc tiếp từ DeveloperMetadata của file
+      if (!activeFolderId) {
+        const meta = ss.getDeveloperMetadata().find((m) => m.getKey() === "AVATAR_STORAGE_FOLDER_ID");
+        if (meta) {
+          activeFolderId = meta.getValue();
+          // Đồng bộ ngược lại UserProperties để các lần gọi sau nhanh hơn
+          PropertiesService.getUserProperties().setProperty("AVATAR_STORAGE_FOLDER_ID", activeFolderId);
+        }
+      }
+
+      // 3. Fallback về config mặc định nếu có
+      if (!activeFolderId && typeof CROPPER_CONFIG !== "undefined") {
+        activeFolderId = (CROPPER_CONFIG.STORAGE_FOLDER_ID || "").trim();
+      }
+
       let folderName = "My Drive (Mặc định)";
       if (activeFolderId) {
         try {
@@ -137,11 +155,12 @@ class AvatarCropperService {
           folderName = "Folder ID không hợp lệ hoặc thiếu quyền";
         }
       }
+
       return {
         ok: true,
-        folderId: activeFolderId,
+        folderId: activeFolderId || "",
         folderName: folderName,
-        isCustom: Boolean(userFolderId),
+        isCustom: Boolean(activeFolderId),
       };
     } catch (err) {
       return {
