@@ -8,6 +8,12 @@ class AvatarCropperService {
     SpreadsheetApp.getUi().showSidebar(htmlOutput);
   }
 
+  // Khởi tạo và hiển thị Dialog cấu hình thư mục lưu trữ
+  static openStorageFolderDialog() {
+    const htmlOutput = HtmlService.createTemplateFromFile("avatar-cropper/storage-settings-dialog").evaluate().setWidth(420).setHeight(240);
+    SpreadsheetApp.getUi().showModalDialog(htmlOutput, "⚙️ Cấu hình thư mục lưu ảnh");
+  }
+
   // Trích xuất thông tin nhân sự và dữ liệu ảnh từ dòng đang chọn
   static getSelectedRowContext() {
     const ss = SpreadsheetApp.getActiveSpreadsheet();

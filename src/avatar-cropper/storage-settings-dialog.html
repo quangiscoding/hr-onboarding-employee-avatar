@@ -1,0 +1,206 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top" />
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Google Sans", Roboto, Arial, sans-serif;
+        font-size: 13px;
+        color: #202124;
+        margin: 0;
+        padding: 14px 16px;
+        user-select: none;
+      }
+      .label-desc {
+        color: #5f6368;
+        font-size: 12px;
+        margin-bottom: 6px;
+      }
+      .folder-badge {
+        font-size: 11.5px;
+        color: #1b5e20;
+        background: #e8f5e9;
+        border: 1px solid #c8e6c9;
+        padding: 6px 10px;
+        border-radius: 6px;
+        display: block;
+        margin-bottom: 12px;
+        word-break: break-all;
+        font-weight: 500;
+      }
+      .input-text {
+        width: 100%;
+        padding: 8px 10px;
+        font-size: 12px;
+        border: 1px solid #dadce0;
+        border-radius: 6px;
+        margin-top: 4px;
+        margin-bottom: 12px;
+      }
+      .input-text:focus {
+        outline: none;
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+      }
+      .btn-group {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+      .btn {
+        padding: 7px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 12px;
+        cursor: pointer;
+        border: none;
+      }
+      .btn-primary {
+        background: #1a73e8;
+        color: #fff;
+      }
+      .btn-primary:hover:not(:disabled) {
+        background: #1557b0;
+      }
+      .btn-secondary {
+        background: #fff;
+        color: #5f6368;
+        border: 1px solid #dadce0;
+      }
+      .btn-secondary:hover:not(:disabled) {
+        background: #f8f9fa;
+      }
+      .btn:disabled {
+        background: #bdc1c6 !important;
+        border-color: #bdc1c6 !important;
+        color: #fff !important;
+        cursor: not-allowed !important;
+      }
+      .status {
+        margin-top: 10px;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 11.5px;
+        display: none;
+      }
+      .status.error {
+        display: block;
+        background: #fce8e6;
+        color: #b3261e;
+      }
+      .status.success {
+        display: block;
+        background: #e6f4ea;
+        color: #137333;
+      }
+      .spinner {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        vertical-align: middle;
+        margin-right: 5px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="label-desc">Thư mục Drive lưu trữ đang áp dụng:</div>
+    <div id="current-folder-display" class="folder-badge">Đang tải cấu hình...</div>
+
+    <label style="color: #202124; font-weight: 500; font-size: 12px">Dán Link Folder hoặc ID Drive mới:</label>
+    <input type="text" id="custom-folder-input" class="input-text" placeholder="https://drive.google.com/drive/folders/... hoặc Folder ID" />
+
+    <div class="btn-group">
+      <button class="btn btn-secondary" id="btn-reset" onclick="handleReset()">Về mặc định</button>
+      <button class="btn btn-secondary" onclick="google.script.host.close()">Đóng</button>
+      <button class="btn btn-primary" id="btn-save" onclick="handleSave()">Lưu thư mục</button>
+    </div>
+
+    <div id="status" class="status"></div>
+
+    <script>
+      function showStatus(type, msg) {
+        const el = document.getElementById("status");
+        el.className = "status " + type;
+        el.innerHTML = msg;
+      }
+
+      function loadConfig() {
+        google.script.run
+          .withSuccessHandler(function (res) {
+            const display = document.getElementById("current-folder-display");
+            if (res) {
+              display.textContent = "📁 " + res.folderName;
+              display.title = "ID: " + (res.folderId || "root");
+            }
+          })
+          .cropperApi_getStorageFolder();
+      }
+
+      function handleSave() {
+        const val = document.getElementById("custom-folder-input").value.trim();
+        if (!val) {
+          alert("Vui lòng nhập Link hoặc ID thư mục Google Drive!");
+          return;
+        }
+
+        const btnSave = document.getElementById("btn-save");
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<span class="spinner"></span>Đang lưu...';
+
+        google.script.run
+          .withSuccessHandler(function (res) {
+            btnSave.disabled = false;
+            btnSave.textContent = "Lưu thư mục";
+            if (res.ok) {
+              document.getElementById("current-folder-display").textContent = "📁 " + res.folderName;
+              document.getElementById("custom-folder-input").value = "";
+              showStatus("success", "✅ " + res.message);
+              setTimeout(function () {
+                google.script.host.close();
+              }, 1200);
+            } else {
+              showStatus("error", "❌ " + res.message);
+            }
+          })
+          .withFailureHandler(function (err) {
+            btnSave.disabled = false;
+            btnSave.textContent = "Lưu thư mục";
+            showStatus("error", "❌ Lỗi: " + (err.message || err));
+          })
+          .cropperApi_setStorageFolder(val);
+      }
+
+      function handleReset() {
+        const btnReset = document.getElementById("btn-reset");
+        btnReset.disabled = true;
+
+        google.script.run
+          .withSuccessHandler(function (res) {
+            btnReset.disabled = false;
+            document.getElementById("custom-folder-input").value = "";
+            loadConfig();
+            showStatus("success", "✅ Đã reset về thư mục mặc định.");
+          })
+          .withFailureHandler(function (err) {
+            btnReset.disabled = false;
+            showStatus("error", "❌ Lỗi: " + (err.message || err));
+          })
+          .cropperApi_setStorageFolder("");
+      }
+
+      loadConfig();
+    </script>
+  </body>
+</html>
