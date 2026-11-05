@@ -156,8 +156,18 @@ class AvatarCropperService {
   static setStorageFolderConfig(folderInput) {
     try {
       const rawInput = String(folderInput || "").trim();
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+      // 1. Trường hợp xóa / reset folder về mặc định
       if (!rawInput) {
         PropertiesService.getUserProperties().deleteProperty("AVATAR_STORAGE_FOLDER_ID");
+
+        // Xóa Developer Metadata cũ trên file nếu có
+        const existingMeta = ss.getDeveloperMetadata().find((m) => m.getKey() === "AVATAR_STORAGE_FOLDER_ID");
+        if (existingMeta) {
+          existingMeta.remove();
+        }
+
         const defaultConfig = this.getStorageFolderConfig();
         return {
           ok: true,
@@ -166,6 +176,8 @@ class AvatarCropperService {
           folderName: defaultConfig.folderName,
         };
       }
+
+      // 2. Validate và trích xuất Folder ID
       const cleanId = AvatarCropperUtil.extractDriveId(rawInput);
       if (!cleanId) {
         return {
@@ -173,8 +185,21 @@ class AvatarCropperService {
           message: "Đường link hoặc ID thư mục Google Drive không hợp lệ!",
         };
       }
+
       const folder = DriveApp.getFolderById(cleanId);
+
+      // Lưu vào UserProperties cho tool local
       PropertiesService.getUserProperties().setProperty("AVATAR_STORAGE_FOLDER_ID", cleanId);
+
+      // GHI VÀO DEVELOPER METADATA CỦA FILE SPREADSHEET (DOCUMENT scope để các script khác đọc được)
+      const existingMeta = ss.getDeveloperMetadata().find((m) => m.getKey() === "AVATAR_STORAGE_FOLDER_ID");
+
+      if (existingMeta) {
+        existingMeta.setValue(cleanId);
+      } else {
+        ss.addDeveloperMetadata("AVATAR_STORAGE_FOLDER_ID", cleanId, SpreadsheetApp.DeveloperMetadataVisibility.DOCUMENT);
+      }
+
       return {
         ok: true,
         folderId: cleanId,
