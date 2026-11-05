@@ -4,12 +4,9 @@
  */
 
 function onOpen() {
-  SpreadsheetApp.getUi()
-    .createMenu("🖼️ Avatar Tools")
-    .addItem("1. Cắt ảnh nhân sự 1:1", "menuOpenAvatarCropper")
-    .addSeparator()
-    .addItem("2. Tự động sao lưu ảnh 1:1 vào Thư mục", "menuSyncSquareAvatars")
-    .addToUi();
+  SpreadsheetApp.getUi().createMenu("🖼️ Avatar Tools").addItem("1. Cắt ảnh nhân sự 1:1", "menuOpenAvatarCropper").addSeparator();
+  // .addItem("2. Tự động sao lưu ảnh 1:1 vào Thư mục", "menuSyncSquareAvatars")
+  // .addToUi();
 }
 
 /**
